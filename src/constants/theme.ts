@@ -26,6 +26,28 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
+/** ModeMobile brand palette, taken from the Figma "Hifi" screens. */
+export const Brand = {
+  blue: '#2B73E8',
+  purple: '#5B21B6',
+  purpleDark: '#4A1FB0',
+  purpleCard: '#7B2FD6',
+  purpleSoft: '#EDE4FB',
+  surface: '#F7F9F8',
+  card: '#FFFFFF',
+  chip: '#E9ECEB',
+  chipActive: '#4B5563',
+  ink: '#111827',
+  inkSoft: '#2C3E50',
+  muted: '#6B7280',
+  border: '#E5E7EB',
+  green: '#16A34A',
+  greenSoft: '#DCFCE7',
+  amber: '#F59E0B',
+  red: '#EF4444',
+  white: '#FFFFFF',
+} as const;
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
