@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BrandBadge, Chip } from '@/components/mode/primitives';
-import { Brand } from '@/constants/theme';
+import { AppBar, Chip, Thumb } from '@/components/mode/primitives';
+import { Brand, Shadow } from '@/constants/theme';
 import { FORM_STATUSES, SAVED_FORMS, type FormStatus } from '@/data/settlements';
 
-const STATUS_COLOR: Record<FormStatus, string> = {
-  Pending: Brand.amber,
-  'Payment Sent': Brand.green,
-  'Case Closed': Brand.red,
+const GOOGLE = require('@/assets/images/mode/google.png');
+
+const DOT: Record<FormStatus, string> = {
+  Pending: Brand.dotPending,
+  'Payment Sent': Brand.dotSent,
+  'Case Closed': Brand.dotClosed,
 };
 
 export default function Forms() {
@@ -20,18 +22,46 @@ export default function Forms() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Forms</Text>
-        <Text style={styles.count}>{SAVED_FORMS.length} files</Text>
-      </View>
+      <AppBar
+        title="Forms"
+        logo={false}
+        titleAlign="left"
+        right={<Text style={styles.count}>{SAVED_FORMS.length} files</Text>}
+      />
 
       {SAVED_FORMS.length === 0 ? (
-        <View style={styles.emptyCard}>
+        <View style={[styles.emptyCard, Shadow.card]}>
           <Text style={styles.emptyTitle}>No saved forms</Text>
           <Text style={styles.emptyBody}>Forms you fill out will be saved here for your records</Text>
         </View>
       ) : (
         <>
+          <View style={styles.legend}>
+            {FORM_STATUSES.map((s) => (
+              <View key={s} style={styles.legendItem}>
+                <View style={[styles.dot, { backgroundColor: DOT[s] }]} />
+                <Text style={styles.legendLabel}>{s}</Text>
+              </View>
+            ))}
+          </View>
+
+          <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+            {forms.length === 0 ? (
+              <Text style={styles.noMatch}>No forms with this status.</Text>
+            ) : (
+              forms.map((f) => (
+                <View key={f.id} style={[styles.item, Shadow.card]}>
+                  <Thumb source={GOOGLE} size={48} radius={8} />
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <Text style={styles.itemTitle}>{f.title}</Text>
+                    <Text style={styles.itemSub}>Submitted: {f.submitted}</Text>
+                  </View>
+                  <View style={[styles.statusDot, { backgroundColor: DOT[f.status] }]} />
+                </View>
+              ))
+            )}
+          </ScrollView>
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -46,25 +76,6 @@ export default function Forms() {
               />
             ))}
           </ScrollView>
-
-          <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-            {forms.length === 0 ? (
-              <Text style={styles.noMatch}>No forms with this status.</Text>
-            ) : (
-              forms.map((f) => (
-                <View key={f.id} style={styles.item}>
-                  <BrandBadge letter="📄" color={Brand.purpleSoft} size={36} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.itemTitle}>{f.title}</Text>
-                    <Text style={styles.itemSub}>Submitted: {f.submitted}</Text>
-                  </View>
-                  <Text style={[styles.status, { backgroundColor: STATUS_COLOR[f.status] }]}>
-                    {f.status}
-                  </Text>
-                </View>
-              ))
-            )}
-          </ScrollView>
         </>
       )}
     </View>
@@ -73,44 +84,38 @@ export default function Forms() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Brand.surface },
-  header: {
+  count: { fontSize: 15, fontWeight: '500', letterSpacing: 0.5, color: 'rgba(0,0,0,0.56)' },
+  legend: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    height: 48,
+    gap: 36,
+    paddingHorizontal: 23,
+    paddingTop: 10,
   },
-  title: { fontSize: 15, fontWeight: '700', color: Brand.ink },
-  count: { fontSize: 11, color: Brand.muted },
-  chipScroll: { flexGrow: 0 },
-  chips: { gap: 8, paddingHorizontal: 16, paddingVertical: 4 },
-  list: { padding: 16, gap: 10 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dot: { width: 15, height: 15, borderRadius: 8 },
+  legendLabel: { fontSize: 15, fontWeight: '600', color: 'rgba(0,0,0,0.46)' },
+  list: { paddingHorizontal: 19, paddingTop: 22, paddingBottom: 16, gap: 12, flexGrow: 1 },
   noMatch: { textAlign: 'center', color: Brand.muted, paddingVertical: 24 },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
     backgroundColor: Brand.white,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Brand.border,
+    borderRadius: 20,
+    height: 80,
+    paddingHorizontal: 17,
   },
-  itemTitle: { fontSize: 14, fontWeight: '700', color: Brand.ink },
-  itemSub: { fontSize: 11, color: Brand.muted },
-  status: {
-    color: Brand.white,
-    fontSize: 11,
-    fontWeight: '700',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
+  itemTitle: { fontSize: 20, fontWeight: '700', letterSpacing: 0.15, color: Brand.ink },
+  itemSub: { fontSize: 15, color: Brand.muted },
+  statusDot: { position: 'absolute', top: 8, right: 25, width: 15, height: 15, borderRadius: 8 },
+  chipScroll: { flexGrow: 0, marginBottom: 12 },
+  chips: { paddingHorizontal: 23, gap: 6 },
   emptyCard: {
-    margin: 16,
+    margin: 19,
+    marginTop: 22,
     backgroundColor: Brand.white,
-    borderRadius: 14,
+    borderRadius: 20,
     padding: 24,
     alignItems: 'center',
     gap: 6,

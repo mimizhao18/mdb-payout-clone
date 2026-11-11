@@ -1,11 +1,33 @@
 import { router } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  ImageBackground,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BrandBadge, ModeLogo, PillButton } from '@/components/mode/primitives';
+import { BrandBadge, BrandBubble, ModeLogo, PillButton } from '@/components/mode/primitives';
 import { BRANDS, PAYOUT_METHODS } from '@/data/settlements';
 import { Brand } from '@/constants/theme';
+
+const BG = require('@/assets/images/mode/bg.png');
+const LOGOS = {
+  apple: require('@/assets/images/mode/apple.png'),
+  spotify: require('@/assets/images/mode/spotify.png'),
+  pepsi: require('@/assets/images/mode/pepsi.png'),
+  instagram: require('@/assets/images/mode/instagram.png'),
+  fortnite: require('@/assets/images/mode/fortnite.png'),
+};
+
+/** Onboarding CTA: 297pt wide, centred, as in Figma. */
+function Cta(props: { label: string; onPress: () => void }) {
+  return <PillButton {...props} style={styles.cta} />;
+}
 
 type StepProps = { onNext: () => void };
 
@@ -31,7 +53,7 @@ function Welcome({ onNext }: StepProps) {
       <Center>
         <ModeLogo size={56} light />
       </Center>
-      <PillButton label="Get Started" onPress={onNext} />
+      <Cta label="Get Started" onPress={onNext} />
       <Text style={styles.legal}>
         By continuing you agree to our <Text style={styles.underline}>Terms of Use</Text> and{' '}
         <Text style={styles.underline}>Class Action Terms</Text>
@@ -56,7 +78,7 @@ function Simple({
         {title ? <Headline>{title}</Headline> : null}
         {body ? <Body>{body}</Body> : null}
       </Center>
-      <PillButton label={cta} onPress={onNext} />
+      <Cta label={cta} onPress={onNext} />
     </>
   );
 }
@@ -64,11 +86,11 @@ function Simple({
 function BrandCloud() {
   return (
     <View style={styles.cloud}>
-      <BrandBadge letter="" color="#111827" size={64} style={styles.cloud1} />
-      <BrandBadge letter="S" color="#16A34A" size={64} style={styles.cloud2} />
-      <BrandBadge letter="P" color="#1D4ED8" size={64} style={styles.cloud3} />
-      <BrandBadge letter="I" color="#C026D3" size={64} style={styles.cloud4} />
-      <BrandBadge letter="F" color="#1F2937" size={64} style={styles.cloud5} />
+      <BrandBubble source={LOGOS.apple} style={styles.cloud1} />
+      <BrandBubble source={LOGOS.spotify} style={styles.cloud2} />
+      <BrandBubble source={LOGOS.pepsi} style={styles.cloud3} />
+      <BrandBubble source={LOGOS.instagram} style={styles.cloud4} />
+      <BrandBubble source={LOGOS.fortnite} style={styles.cloud5} />
     </View>
   );
 }
@@ -89,7 +111,7 @@ function NotificationCard() {
 function EligibleCard() {
   return (
     <View style={styles.eligible}>
-      <BrandBadge letter="" color="#111827" size={52} />
+      <BrandBubble source={LOGOS.apple} size={52} />
       <View style={{ flex: 1 }}>
         <Text style={styles.eligibleTitle}>Apple</Text>
         <Text style={styles.eligibleSub}>Claim by Aug 10th 2025</Text>
@@ -141,7 +163,7 @@ function BrandPicker({ onNext }: StepProps) {
           })}
         </ScrollView>
       </View>
-      <PillButton label="Next" onPress={onNext} />
+      <Cta label="Next" onPress={onNext} />
     </>
   );
 }
@@ -166,7 +188,7 @@ function PayoutPicker({ onNext }: StepProps) {
           ))}
         </View>
       </View>
-      <PillButton label="Next" onPress={onNext} />
+      <Cta label="Next" onPress={onNext} />
     </>
   );
 }
@@ -183,7 +205,7 @@ function Estimating({ onNext }: StepProps) {
         <Body>Estimating settlements you can claim now!</Body>
         <ActivityIndicator color={Brand.white} style={{ marginTop: 12 }} />
       </Center>
-      <PillButton label="Next" onPress={onNext} />
+      <Cta label="Next" onPress={onNext} />
     </>
   );
 }
@@ -287,50 +309,77 @@ export default function Onboarding() {
   const progress = step === 0 ? 0 : step / (TOTAL_STEPS - 1);
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}>
-      {step > 0 && (
-        <View style={styles.track} accessibilityRole="progressbar">
-          <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
-        </View>
-      )}
-      <View style={styles.content}>{steps[step]}</View>
-    </View>
+    <ImageBackground source={BG} resizeMode="cover" style={styles.bg}>
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.tint]} />
+      <View style={[styles.screen, { paddingTop: insets.top + 6, paddingBottom: insets.bottom + 48 }]}>
+        {step > 0 && (
+          <View style={styles.track} accessibilityRole="progressbar">
+            <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
+          </View>
+        )}
+        <View style={styles.content}>{steps[step]}</View>
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Brand.blue, paddingHorizontal: 24 },
+  bg: { flex: 1, backgroundColor: Brand.blue },
+  // Softens the money pattern so it stays a faint texture, as in Figma.
+  tint: { backgroundColor: 'rgba(43,115,232,0.5)' },
+  screen: { flex: 1, paddingHorizontal: 42 },
+  cta: { alignSelf: 'center', width: 297 },
   track: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    height: 11,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+    marginHorizontal: -9,
     marginBottom: 12,
     overflow: 'hidden',
   },
-  fill: { height: 4, backgroundColor: Brand.white },
+  fill: { height: 11, borderRadius: 6, backgroundColor: Brand.white },
   content: { flex: 1, justifyContent: 'space-between', gap: 16 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   headline: {
     color: Brand.white,
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: '900',
     fontStyle: 'italic',
+    letterSpacing: 2,
+    textAlign: 'center',
+    textShadowColor: 'rgba(30,64,175,0.6)',
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 3,
+  },
+  body: {
+    color: Brand.white,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    lineHeight: 20,
     textAlign: 'center',
   },
-  body: { color: Brand.white, fontSize: 13, fontWeight: '600', textAlign: 'center', lineHeight: 18 },
-  eyebrow: { color: Brand.white, fontSize: 13, fontWeight: '600', textAlign: 'center' },
-  legal: { color: Brand.white, fontSize: 11, textAlign: 'center' },
+  eyebrow: {
+    color: Brand.white,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  legal: { color: Brand.white, fontSize: 12, textAlign: 'center' },
   underline: { textDecorationLine: 'underline' },
-  emoji: { fontSize: 72 },
+  emoji: { fontSize: 110, lineHeight: 130 },
   bigNumber: { color: Brand.white, fontSize: 56, fontWeight: '900', fontStyle: 'italic' },
   bigStars: { color: '#FACC15', fontSize: 48, letterSpacing: 4 },
   estimate: { color: Brand.white, fontSize: 36, fontWeight: '800' },
-  cloud: { width: 260, height: 190 },
-  cloud1: { position: 'absolute', left: 10, top: 20 },
-  cloud2: { position: 'absolute', left: 95, top: 0 },
-  cloud3: { position: 'absolute', right: 10, top: 20 },
-  cloud4: { position: 'absolute', left: 50, bottom: 10 },
-  cloud5: { position: 'absolute', right: 40, bottom: 20 },
+  // Positions are the Figma coordinates relative to the top-left logo (x - 42, y - 152).
+  cloud: { width: 334, height: 243 },
+  cloud1: { position: 'absolute', left: 0, top: 47 },
+  cloud2: { position: 'absolute', left: 127, top: 0 },
+  cloud3: { position: 'absolute', left: 241, top: 38 },
+  cloud4: { position: 'absolute', left: 73, top: 150 },
+  cloud5: { position: 'absolute', left: 190, top: 146 },
   notification: {
     flexDirection: 'row',
     alignItems: 'center',

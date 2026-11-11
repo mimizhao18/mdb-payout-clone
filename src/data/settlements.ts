@@ -1,5 +1,5 @@
 export type SettlementTag = 'no-proof' | 'uncapped';
-export type SettlementCategory = 'Upcoming' | 'Privacy' | 'False Ads' | 'Other';
+export type SettlementCategory = 'Upcoming' | 'Privacy' | 'False Ads' | 'Overbilling';
 
 export type Settlement = {
   id: string;
@@ -92,7 +92,7 @@ export const SETTLEMENTS: Settlement[] = [
     headline: 'claim at least $500',
     dueInDays: 576,
     tag: 'uncapped',
-    category: 'Other',
+    category: 'Overbilling',
     color: '#2563EB',
     letter: 'M',
     summary: 'Account holders affected by misleading ad targeting may claim a payment.',
@@ -101,13 +101,27 @@ export const SETTLEMENTS: Settlement[] = [
   },
 ];
 
-export const ALL_SETTLEMENTS: Settlement[] = [FEATURED, ...SETTLEMENTS];
+/** Second card in the Featured carousel (the Figma frame peeks a second card). */
+export const FEATURED_2: typeof FEATURED = {
+  ...FEATURED,
+  id: 'featured-doordash',
+  company: 'DoorDash',
+  title: 'DoorDash Delivery Fee Settlement',
+  amount: '$15-$40',
+  tag: 'uncapped',
+  claimsFiled: 3820,
+  claimsTotal: 9000,
+};
+
+export const FEATURED_LIST = [FEATURED, FEATURED_2];
+
+export const ALL_SETTLEMENTS: Settlement[] = [FEATURED, FEATURED_2, ...SETTLEMENTS];
 
 export function getSettlement(id: string) {
   return ALL_SETTLEMENTS.find((s) => s.id === id);
 }
 
-export const CATEGORIES = ['All', 'Upcoming', 'Privacy', 'False Ads', 'Other'] as const;
+export const CATEGORIES = ['All', 'Upcoming', 'Privacy', 'False Ads', 'Overbilling'] as const;
 
 export type WalletClaim = {
   id: string;
