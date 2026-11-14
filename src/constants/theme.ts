@@ -26,6 +26,63 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
+/** ModeMobile brand palette, taken from the Figma "Hifi" screens. */
+export const Brand = {
+  blue: '#2B73E8',
+  /** purple-600: primary CTA buttons and accents. */
+  purple: '#7E2DD8',
+  /** purple-700: the small "Claim" buttons. */
+  purpleDark: '#642AD0',
+  /** purple-800 → purple-500 make up the banner and wallet-card gradient. */
+  gradientStart: '#4A27C9',
+  gradientEnd: '#8E2EDF',
+  progress: '#5129CB',
+  purpleLink: '#6750A4',
+  purpleSoft: '#EDE4FB',
+  surface: '#F7F9F8',
+  card: '#FFFFFF',
+  chip: 'rgba(232,236,239,0.54)',
+  chipActive: '#6C757E',
+  ink: '#000000',
+  inkSoft: '#2C3E50',
+  muted: '#6C757E',
+  mutedLight: '#737E86',
+  heading: '#555970',
+  border: '#E5E7EB',
+  track: '#EFEFEF',
+  claimed: '#00B451',
+  noProofBg: '#E4F6E7',
+  noProofFg: '#00AA34',
+  uncappedBg: '#FFF3C7',
+  uncappedFg: '#C18300',
+  uncappedIcon: '#E5A100',
+  dotPending: '#FFAD10',
+  dotSent: '#00AA34',
+  dotClosed: '#FD0400',
+  link: '#027FFF',
+  buttonGrey: '#E7ECEE',
+  pillGrey: '#F1F2F6',
+  white: '#FFFFFF',
+} as const;
+
+/** Shared card shadows from the Figma effects. */
+export const Shadow = {
+  card: {
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 2,
+  },
+  bar: {
+    shadowColor: '#000',
+    shadowOpacity: 0.09,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 2,
+  },
+} as const;
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
