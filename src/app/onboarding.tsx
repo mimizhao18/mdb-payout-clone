@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandBadge, BrandBubble, ModeLogo, PillButton } from '@/components/mode/primitives';
 import { BRANDS, PAYOUT_METHODS } from '@/data/settlements';
 import { Brand } from '@/constants/theme';
+import { saveOnboarding } from '@/lib/api';
+import { notify } from '@/lib/dialogs';
 
 const BG = require('@/assets/images/mode/bg.png');
 const LOGOS = {
@@ -137,10 +139,13 @@ function Testimonial() {
   );
 }
 
-function BrandPicker({ onNext }: StepProps) {
+function BrandPicker({ onNext, onChange }: StepProps & { onChange: (ids: string[]) => void }) {
   const [selected, setSelected] = useState<string[]>([]);
-  const toggle = (id: string) =>
-    setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  const toggle = (id: string) => {
+    const updated = selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id];
+    setSelected(updated);
+    onChange(updated);
+  };
   return (
     <>
       <View style={styles.pickerBody}>
@@ -168,7 +173,7 @@ function BrandPicker({ onNext }: StepProps) {
   );
 }
 
-function PayoutPicker({ onNext }: StepProps) {
+function PayoutPicker({ onNext, onChange }: StepProps & { onChange: (method: string) => void }) {
   const [method, setMethod] = useState<string | null>(null);
   return (
     <>
@@ -181,7 +186,10 @@ function PayoutPicker({ onNext }: StepProps) {
               key={m}
               accessibilityRole="radio"
               accessibilityState={{ selected: method === m }}
-              onPress={() => setMethod(m)}
+              onPress={() => {
+                setMethod(m);
+                onChange(m);
+              }}
               style={[styles.option, method === m && styles.optionOn]}>
               <Text style={[styles.optionLabel, method === m && { color: Brand.white }]}>{m}</Text>
             </Pressable>
@@ -215,11 +223,28 @@ const TOTAL_STEPS = 12;
 export default function Onboarding() {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
-  const next = () => {
-    if (step >= TOTAL_STEPS - 1) {
-      router.replace('/paywall');
-    } else {
+  // What the user picked, collected as they go and saved on the last step.
+  const [picks, setPicks] = useState<{ brands: string[]; method: string | null }>({
+    brands: [],
+    method: null,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const next = async () => {
+    if (step < TOTAL_STEPS - 1) {
       setStep((s) => s + 1);
+      return;
+    }
+    if (saving) return;
+    setSaving(true);
+    try {
+      // Writes the answers to the user's profile and matches them to settlements.
+      await saveOnboarding({ brands: picks.brands, payoutMethod: picks.method });
+      router.replace('/paywall');
+    } catch (e) {
+      notify('Couldn’t save your answers', e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -289,8 +314,16 @@ export default function Onboarding() {
       }
       body="Trusted by thousands of users"
     />,
-    <BrandPicker key="brands" onNext={next} />,
-    <PayoutPicker key="payout" onNext={next} />,
+    <BrandPicker
+      key="brands"
+      onNext={next}
+      onChange={(brands) => setPicks((p) => ({ ...p, brands }))}
+    />,
+    <PayoutPicker
+      key="payout"
+      onNext={next}
+      onChange={(method) => setPicks((p) => ({ ...p, method }))}
+    />,
     <Estimating key="estimating" onNext={next} />,
     <Simple
       key="estimate"

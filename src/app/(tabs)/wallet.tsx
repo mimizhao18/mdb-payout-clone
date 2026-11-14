@@ -5,8 +5,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientCard } from '@/components/mode/gradient-card';
 import { HOW_PAYOUTS_WORK, InfoModal } from '@/components/mode/info-modal';
 import { AppBar, Thumb } from '@/components/mode/primitives';
+import { ErrorState, LoadingState } from '@/components/mode/remote-state';
 import { Brand, Shadow } from '@/constants/theme';
-import { WALLET_CLAIMS, WALLET_SUMMARY, type WalletClaim } from '@/data/settlements';
+import { useRemote } from '@/hooks/use-remote';
+import { fetchWallet, type WalletClaim } from '@/lib/api';
 
 const GOOGLE = require('@/assets/images/mode/google.png');
 
@@ -39,8 +41,19 @@ function ClaimRow({ claim }: { claim: WalletClaim }) {
 export default function Wallet() {
   const insets = useSafeAreaInsets();
   const [infoOpen, setInfoOpen] = useState(false);
-  const inProgress = WALLET_CLAIMS.filter((c) => c.status === 'in-progress');
-  const finished = WALLET_CLAIMS.filter((c) => c.status === 'finished');
+  const { data, error, loading, reload } = useRemote(fetchWallet);
+
+  if (!data) {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        <AppBar title="Wallet" />
+        {loading || !error ? <LoadingState /> : <ErrorState message={error} onRetry={reload} />}
+      </View>
+    );
+  }
+
+  const inProgress = data.claims.filter((c) => c.status === 'in_progress');
+  const finished = data.claims.filter((c) => c.status === 'finished');
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -58,15 +71,15 @@ export default function Wallet() {
               <Text style={styles.infoGlyph}>?</Text>
             </Pressable>
           </View>
-          <Text style={styles.payout}>${WALLET_SUMMARY.estimatedPayout}</Text>
+          <Text style={styles.payout}>${Math.round(data.estimatedPayout).toLocaleString('en-US')}</Text>
           <View style={styles.cardBottom}>
             <View style={{ gap: 9 }}>
               <Text style={styles.statLabel}># Claimed</Text>
-              <Text style={styles.statValue}>{WALLET_SUMMARY.claimed}</Text>
+              <Text style={styles.statValue}>{data.claimed}</Text>
             </View>
             <View style={{ gap: 10 }}>
               <Text style={styles.statLabel}>Notified</Text>
-              <Text style={styles.statValue}>{WALLET_SUMMARY.notified}</Text>
+              <Text style={styles.statValue}>{data.notified}</Text>
             </View>
           </View>
         </GradientCard>

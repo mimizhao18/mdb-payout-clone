@@ -3,8 +3,11 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppBar, Chip, Thumb } from '@/components/mode/primitives';
+import { ErrorState, LoadingState } from '@/components/mode/remote-state';
 import { Brand, Shadow } from '@/constants/theme';
-import { FORM_STATUSES, SAVED_FORMS, type FormStatus } from '@/data/settlements';
+import { FORM_STATUSES } from '@/data/settlements';
+import { useRemote } from '@/hooks/use-remote';
+import { fetchForms, type FormStatus } from '@/lib/api';
 
 const GOOGLE = require('@/assets/images/mode/google.png');
 
@@ -18,7 +21,18 @@ export default function Forms() {
   const insets = useSafeAreaInsets();
   // Tapping the active chip clears the filter and shows everything again.
   const [filter, setFilter] = useState<FormStatus | null>(null);
-  const forms = filter ? SAVED_FORMS.filter((f) => f.status === filter) : SAVED_FORMS;
+  const { data, error, loading, reload } = useRemote(fetchForms);
+
+  if (!data) {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        <AppBar title="Forms" logo={false} titleAlign="left" />
+        {loading || !error ? <LoadingState /> : <ErrorState message={error} onRetry={reload} />}
+      </View>
+    );
+  }
+
+  const forms = filter ? data.filter((f) => f.status === filter) : data;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -26,10 +40,10 @@ export default function Forms() {
         title="Forms"
         logo={false}
         titleAlign="left"
-        right={<Text style={styles.count}>{SAVED_FORMS.length} files</Text>}
+        right={<Text style={styles.count}>{data.length} files</Text>}
       />
 
-      {SAVED_FORMS.length === 0 ? (
+      {data.length === 0 ? (
         <View style={[styles.emptyCard, Shadow.card]}>
           <Text style={styles.emptyTitle}>No saved forms</Text>
           <Text style={styles.emptyBody}>Forms you fill out will be saved here for your records</Text>

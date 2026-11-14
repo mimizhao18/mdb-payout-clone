@@ -1,17 +1,50 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PillButton, Tag, Thumb } from '@/components/mode/primitives';
+import { ErrorState, LoadingState } from '@/components/mode/remote-state';
 import { Brand } from '@/constants/theme';
-import { getSettlement } from '@/data/settlements';
+import { useRemote } from '@/hooks/use-remote';
+import { confirmAsync, notify } from '@/lib/dialogs';
+import {
+  fetchMyClaimStatus,
+  fetchProfile,
+  fetchSettlement,
+  fileClaim,
+  type Settlement,
+} from '@/lib/api';
 
 const GOOGLE = require('@/assets/images/mode/google.png');
 
 export default function SettlementDetails() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const settlement = getSettlement(id);
+  const [busy, setBusy] = useState(false);
+
+  // One load fetches the settlement, this user's claim on it, and their
+  // referral code (used in the share message).
+  const load = useCallback(async () => {
+    const settlement = await fetchSettlement(id);
+    const [claimStatus, profile] = await Promise.all([
+      settlement ? fetchMyClaimStatus(settlement.uuid) : Promise.resolve(null),
+      fetchProfile(),
+    ]);
+    return { settlement, claimStatus, referralCode: profile?.referralCode ?? null };
+  }, [id]);
+  const { data, error, loading, reload } = useRemote(load);
+
+  if (!data) {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        {loading || !error ? <LoadingState /> : <ErrorState message={error} onRetry={reload} />}
+      </View>
+    );
+  }
+
+  const { settlement, claimStatus, referralCode } = data;
 
   if (!settlement) {
     return (
@@ -22,10 +55,44 @@ export default function SettlementDetails() {
     );
   }
 
+  const alreadyFiled = claimStatus === 'in_progress' || claimStatus === 'finished';
+
   const share = () =>
     Share.share({
-      message: `${settlement.title}: ${settlement.headline}. Found on ModeMobile.`,
+      message:
+        `${settlement.title}: ${settlement.headline}. Found on ModeMobile.` +
+        (referralCode ? ` Use my code ${referralCode}.` : ''),
     });
+
+  /**
+   * The app never files a claim for the user. We open the official claim site,
+   * then ask whether they filed. Only if they say yes do we save it.
+   */
+  async function start(s: Settlement) {
+    if (alreadyFiled) {
+      router.replace('/forms');
+      return;
+    }
+    setBusy(true);
+    try {
+      let message =
+        'ModeMobile doesn’t file claims for you. If you finished the claim on the official site, we’ll save it to your Wallet and Forms.';
+      if (s.claimUrl) {
+        await WebBrowser.openBrowserAsync(s.claimUrl);
+      } else {
+        message =
+          'This settlement doesn’t have an official claim link in the app yet. Save it to your Wallet and Forms anyway?';
+      }
+      const filed = await confirmAsync('Did you submit your claim?', message, 'Yes, save it', 'Not yet');
+      if (!filed) return;
+      await fileClaim(s);
+      router.replace('/forms');
+    } catch (e) {
+      notify('Couldn’t save your claim', e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -70,6 +137,11 @@ export default function SettlementDetails() {
           <Text style={styles.label}>Description</Text>
           <Text style={styles.copy}>{settlement.description}</Text>
         </View>
+
+        <Text style={styles.disclaimer}>
+          ModeMobile is not a law firm and does not file claims on your behalf. Payments are made by
+          the official settlement administrator and aren’t guaranteed.
+        </Text>
       </ScrollView>
 
       <View style={[styles.actions, { paddingBottom: insets.bottom + 16 }]}>
@@ -82,9 +154,14 @@ export default function SettlementDetails() {
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.replace('/forms')}
-          style={({ pressed }) => [styles.action, styles.start, { opacity: pressed ? 0.85 : 1 }]}>
-          <Text style={styles.startLabel}>Get Started</Text>
+          disabled={busy}
+          onPress={() => start(settlement)}
+          style={({ pressed }) => [
+            styles.action,
+            styles.start,
+            { opacity: busy ? 0.6 : pressed ? 0.85 : 1 },
+          ]}>
+          <Text style={styles.startLabel}>{alreadyFiled ? 'View in Forms' : 'Get Started'}</Text>
         </Pressable>
       </View>
     </View>
@@ -136,6 +213,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 20, fontWeight: '600', lineHeight: 30, color: Brand.ink },
   deadline: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   calendar: { fontSize: 22, color: Brand.mutedLight },
+  disclaimer: { fontSize: 12, lineHeight: 17, color: Brand.mutedLight },
   actions: {
     backgroundColor: Brand.white,
     paddingHorizontal: 25,

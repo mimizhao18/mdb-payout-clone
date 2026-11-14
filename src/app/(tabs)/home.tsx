@@ -20,13 +20,11 @@ import {
   Tag,
   Thumb,
 } from '@/components/mode/primitives';
+import { ErrorState, LoadingState } from '@/components/mode/remote-state';
 import { Brand, Shadow } from '@/constants/theme';
-import {
-  CATEGORIES,
-  FEATURED_LIST,
-  SETTLEMENTS,
-  type Settlement,
-} from '@/data/settlements';
+import { CATEGORIES } from '@/data/settlements';
+import { useRemote } from '@/hooks/use-remote';
+import { fetchSettlements, type Settlement } from '@/lib/api';
 
 const MENU = ['How does this work', 'Privacy Policy', 'Terms of Use', 'Contact Support'] as const;
 const MENU_ICON = ['ⓘ', '⛉', '▤', '?'] as const;
@@ -36,14 +34,8 @@ function open(id: string) {
   router.push({ pathname: '/settlement/[id]', params: { id } });
 }
 
-function FeaturedCard({
-  item,
-  width,
-}: {
-  item: (typeof FEATURED_LIST)[number];
-  width: number;
-}) {
-  const progress = item.claimsFiled / item.claimsTotal;
+function FeaturedCard({ item, width }: { item: Settlement; width: number }) {
+  const progress = item.claimsTotal > 0 ? item.claimsFiled / item.claimsTotal : 0;
   return (
     <Pressable onPress={() => open(item.id)} style={[styles.featured, Shadow.card, { width }]}>
       <View style={styles.featuredTop}>
@@ -94,9 +86,23 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
 
-  const list = category === 'All' ? SETTLEMENTS : SETTLEMENTS.filter((s) => s.category === category);
+  const { data, error, loading, reload } = useRemote(fetchSettlements);
+
   // The featured cards are nearly full width so the next one peeks in, as in Figma.
   const cardWidth = width - 36 - 16;
+
+  if (!data) {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        <AppBar title="Settlements" titleSize={17} />
+        {loading || !error ? <LoadingState /> : <ErrorState message={error} onRetry={reload} />}
+      </View>
+    );
+  }
+
+  const featured = data.filter((s) => s.isFeatured);
+  const rest = data.filter((s) => !s.isFeatured);
+  const list = category === 'All' ? rest : rest.filter((s) => s.category === category);
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -130,7 +136,7 @@ export default function Home() {
           decelerationRate="fast"
           style={styles.carousel}
           contentContainerStyle={styles.carouselContent}>
-          {FEATURED_LIST.map((item) => (
+          {featured.map((item) => (
             <FeaturedCard key={item.id} item={item} width={cardWidth} />
           ))}
         </ScrollView>
